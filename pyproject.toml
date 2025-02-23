@@ -1,0 +1,49 @@
+[project]
+name = "gaze-rs"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Onésime BERNARD", email = "bernard.onesime@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "pillow>=11.1.0",
+    "torch>=2.6.0",
+    "torchaudio>=2.6.0",
+    "torchvision>=0.21.0",
+]
+
+[project.scripts]
+gaze-rs = "gaze_rs:main"
+
+[tool.maturin]
+module-name = "gaze_rs._core"
+python-packages = ["gaze_rs"]
+python-source = "src"
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/nightly/cpu"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[dependency-groups]
+dev = [
+    "euporie>=2.8.6",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+    "openvino-dev>=2024.6.0",
+    "pyright[nodejs]>=1.1.394",
+    "python-lsp-ruff>=2.2.2",
+    "python-lsp-server>=1.12.2",
+    "ruff>=0.9.6",
+    "tensorboard>=2.19.0",
+    "torch-tb-profiler>=0.4.3",
+    "tqdm>=4.67.1",
+    "wat-inspector>=0.4.3",
+]
