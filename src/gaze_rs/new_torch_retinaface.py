@@ -173,6 +173,62 @@ class RetinafaceModel(nn.Module):
             bias=False,
         )
         # plus3: [1, 512, 28, 28]
+        ## stage2_unit2
+        self.stage2_unit2_bn1 = nn.BatchNorm2d(512, eps=BN_EPS, affine=False)
+        self.stage2_unit2_relu1 = nn.ReLU()
+        self.stage2_unit2_conv1 = nn.Conv2d(
+            in_channels=512,
+            out_channels=128,
+            kernel_size=(1,1),
+            stride=(1,1),
+            padding="valid",
+            bias=False,
+        )
+        self.stage2_unit2_bn2 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit2_relu2 = nn.ReLU()
+        self.stage2_unit2_conv2_pad = nn.ZeroPad2d(1)
+        self.stage2_unit2_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            padding="valid",
+            bias=False,
+        )
+        self.stage2_unit2_bn3 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit2_relu3 = nn.ReLU()
+        self.stage2_unit2_conv3 = nn.Conv2d(
+            in_channels=128,
+            out_channels=512,
+            kernel_size=(1,1),
+            stride=(1,1),
+            padding="valid",
+            bias=False,
+        )
+        # plus4: [1, 512, 80, 80]
+        ## stage2_unit3
+        self.stage2_unit3_bn1 = nn.BatchNorm2d(512, eps=BN_EPS, affine=False)
+        self.stage2_unit3_relu1 = nn.ReLU()
+        self.stage2_unit3_conv1 = nn.Conv2d(
+            in_channels=512,
+            out_channels=128,
+            kernel_size=(1,1),
+            stride=(1,1),
+        )
+        self.stage2_unit3_bn2 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit3_relu2 = nn.ReLU()
+        self.stage2_unit3_conv2_pad = nn.ZeroPad2d(1)
+        self.stage2_unit3_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+        )
+        self.stage2_unit3_bn3 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit3_relu3 = nn.ReLU()
+        self.stage2_unit3_conv3 = nn.Conv2d(
+            
+        )
         ...
 
 
@@ -237,4 +293,16 @@ class RetinafaceModel(nn.Module):
         stage2_unit1_conv3 = self.stage2_unit1_conv3(stage2_unit1_relu3)
         stage2_unit1_sc = self.stage2_unit1_sc(stage2_unit1_relu1)
         plus3 = stage2_unit1_conv3 + stage2_unit1_sc
-        return plus3
+        ## stage2_unit2
+        stage2_unit2_bn1 = self.stage2_unit2_bn1(plus3)
+        stage2_unit2_relu1 = self.stage2_unit2_relu1(stage2_unit2_bn1)
+        stage2_unit2_conv1 = self.stage2_unit2_conv1(stage2_unit2_relu1)
+        stage2_unit2_bn2 = self.stage2_unit2_bn2(stage2_unit2_conv1)
+        stage2_unit2_relu2 = self.stage2_unit2_relu2(stage2_unit2_bn2)
+        stage2_unit2_conv2_pad = self.stage2_unit2_conv2_pad(stage2_unit2_relu2)
+        stage2_unit2_conv2 = self.stage2_unit2_conv2(stage2_unit2_conv2_pad)
+        stage2_unit2_bn3 = self.stage2_unit2_bn3(stage2_unit2_conv2)
+        stage2_unit2_relu3 = self.stage2_unit2_relu3(stage2_unit2_bn3)
+        stage2_unit2_conv3 = self.stage2_unit2_conv3(stage2_unit2_relu3)
+        plus4 = stage2_unit2_conv3 + plus3
+        return plus4
