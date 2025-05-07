@@ -227,9 +227,97 @@ class RetinafaceModel(nn.Module):
         self.stage2_unit3_bn3 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
         self.stage2_unit3_relu3 = nn.ReLU()
         self.stage2_unit3_conv3 = nn.Conv2d(
-            
+            in_channels=128,
+            out_channels=512,
+            kernel_size=(1,1),
+            stride=(1,1),
         )
-        ...
+        # plus5: [1, 512, 28, 28]
+        ## stage2_unit4
+        self.stage2_unit4_bn1 = nn.BatchNorm2d(512, eps=BN_EPS, affine=False)
+        self.stage2_unit4_relu1 = nn.ReLU()
+        self.stage2_unit4_conv1 = nn.Conv2d(
+            in_channels=512,
+            out_channels=128,
+            kernel_size=(1,1),
+            stride=(1,1),
+        )
+        self.stage2_unit4_bn2 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit4_relu2 = nn.ReLU()
+        self.stage2_unit4_conv2_pad = nn.ZeroPad2d(1)
+        self.stage2_unit4_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+        )
+        self.stage2_unit4_bn3 = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.stage2_unit4_relu3 = nn.ReLU()
+        self.stage2_unit4_conv3 = nn.Conv2d(
+            in_channels=128,
+            out_channels=512,
+            kernel_size=(1,1),
+            stride=(1,1),
+        )
+        # plus6: [1, 512, 28, 28]
+        self.stage3_unit1_bn1 = nn.BatchNorm2d(512, eps=BN_EPS, affine=False)
+        self.stage3_unit1_relu1 = nn.ReLU()
+        self.stage3_unit1_conv1 = nn.Conv2d(
+            in_channels=512,
+            out_channels=256,
+            kernel_size=(1,1),
+            stride=(1,1),
+        )
+        self.stage3_unit1_bn2 = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.stage3_unit1_relu2 = nn.ReLU()
+        self.stage3_unit1_conv2_pad = nn.ZeroPad2d(1)
+        self.stage3_unit1_conv2 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(2,2),
+        )
+        self.stage3_unit1_bn3 = nn.BatchNorm2d(256, eps=BN_EPS, affine=False )
+        self.stage3_unit1_relu3 = nn.ReLU()
+        self.stage3_unit1_conv3 = nn.Conv2d(
+            in_channels=256,
+            out_channels=1024,
+            kernel_size=(1,1),
+            stride=(1,1)
+        )
+        self.stage3_unit1_sc = nn.Conv2d(
+            in_channels=512,
+            out_channels=1024,
+            kernel_size=(1,1),
+            stride=(2,2)
+        )
+        # plus7: [1, 1024, 14, 14]
+        self.stage3_unit2_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS, affine=False)
+        self.stage3_unit2_relu1 = nn.ReLU()
+        self.stage3_unit2_conv1 = nn.Conv2d(
+            in_channels=1024,
+            out_channels=256,
+            kernel_size=(1,1),
+            stride=(1,1)
+        )
+        self.stage3_unit2_bn2 = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.stage3_unit2_relu2 = nn.ReLU()
+        self.stage3_unit2_conv2_pad = nn.ZeroPad2d(1)
+        self.stage3_unit2_conv2 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1)
+        )
+        self.stage3_unit2_bn3 = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.stage3_unit2_relu3 = nn.ReLU()
+        self.stage3_unit2_conv3 = nn.Conv2d(
+            in_channels=256,
+            out_channels=1024,
+            kernel_size=(1,1),
+            stride=(1,1)
+        )
+        # plus8: [1, 1024, 14, 14]
 
 
     def forward(self, x):
@@ -305,4 +393,54 @@ class RetinafaceModel(nn.Module):
         stage2_unit2_relu3 = self.stage2_unit2_relu3(stage2_unit2_bn3)
         stage2_unit2_conv3 = self.stage2_unit2_conv3(stage2_unit2_relu3)
         plus4 = stage2_unit2_conv3 + plus3
-        return plus4
+        ## stage2_unit3
+        stage2_unit3_bn1 = self.stage2_unit3_bn1(plus4)
+        stage2_unit3_relu1 = self.stage2_unit3_relu1(stage2_unit3_bn1)
+        stage2_unit3_conv1 = self.stage2_unit3_conv1(stage2_unit3_relu1)
+        stage2_unit3_bn2 = self.stage2_unit3_bn2(stage2_unit3_conv1)
+        stage2_unit3_relu2 = self.stage2_unit3_relu2(stage2_unit3_bn2)
+        stage2_unit3_conv2_pad = self.stage2_unit3_conv2_pad(stage2_unit3_relu2)
+        stage2_unit3_conv2 = self.stage2_unit3_conv2(stage2_unit3_conv2_pad)
+        stage2_unit3_bn3 = self.stage2_unit3_bn3(stage2_unit3_conv2)
+        stage2_unit3_relu3 = self.stage2_unit3_relu3(stage2_unit3_bn3)
+        stage2_unit3_conv3 = self.stage2_unit3_conv3(stage2_unit3_relu3)
+        plus5 = plus4 + stage2_unit3_conv3
+        ## stage2_unit4
+        stage2_unit4_bn1 = self.stage2_unit4_bn1(plus5)
+        stage2_unit4_relu1 = self.stage2_unit4_relu1(stage2_unit4_bn1)
+        stage2_unit4_conv1 = self.stage2_unit4_conv1(stage2_unit4_relu1)
+        stage2_unit4_bn2 = self.stage2_unit4_bn2(stage2_unit4_conv1)
+        stage2_unit4_relu2 = self.stage2_unit4_relu2(stage2_unit4_bn2)
+        stage2_unit4_conv2_pad = self.stage2_unit4_conv2_pad(stage2_unit4_relu2)
+        stage2_unit4_conv2 = self.stage2_unit4_conv2(stage2_unit4_conv2_pad)
+        stage2_unit4_bn3 = self.stage2_unit4_bn3(stage2_unit4_conv2)
+        stage2_unit4_relu3 = self.stage2_unit4_relu3(stage2_unit4_bn3)
+        stage2_unit4_conv3 = self.stage2_unit4_conv3(stage2_unit4_relu3)
+        plus6 = plus5 + stage2_unit4_conv3
+        # stage3
+        ## stage3_unit1
+        stage3_unit1_bn1 = self.stage3_unit1_bn1(plus6)
+        stage3_unit1_relu1 = self.stage3_unit1_relu1(stage3_unit1_bn1)
+        stage3_unit1_conv1 = self.stage3_unit1_conv1(stage3_unit1_relu1)
+        stage3_unit1_bn2 = self.stage3_unit1_bn2(stage3_unit1_conv1)
+        stage3_unit1_relu2 = self.stage3_unit1_relu2(stage3_unit1_bn2)
+        stage3_unit1_conv2_pad = self.stage3_unit1_conv2_pad(stage3_unit1_relu2)
+        stage3_unit1_conv2 = self.stage3_unit1_conv2(stage3_unit1_conv2_pad)
+        stage3_unit1_bn3 = self.stage3_unit1_bn3(stage3_unit1_conv2)
+        stage3_unit1_relu3 = self.stage3_unit1_relu3(stage3_unit1_bn3)
+        stage3_unit1_conv3 = self.stage3_unit1_conv3(stage3_unit1_relu3)
+        stage3_unit1_sc = self.stage3_unit1_sc(stage3_unit1_relu1)
+        plus7 = stage3_unit1_conv3 + stage3_unit1_sc
+        ## stage3_unit2
+        stage3_unit2_bn1 = self.stage3_unit2_bn1(plus7)
+        stage3_unit2_relu1 = self.stage3_unit2_relu1(stage3_unit2_bn1)
+        stage3_unit2_conv1 = self.stage3_unit2_conv1(stage3_unit2_relu1)
+        stage3_unit2_bn2 = self.stage3_unit2_bn2(stage3_unit2_conv1)
+        stage3_unit2_relu2 = self.stage3_unit2_relu2(stage3_unit2_bn2)
+        stage3_unit2_conv2_pad = self.stage3_unit2_conv2_pad(stage3_unit2_relu2)
+        stage3_unit2_conv2 = self.stage3_unit2_conv2(stage3_unit2_conv2_pad)
+        stage3_unit2_bn3 = self.stage3_unit2_bn3(stage3_unit2_conv2)
+        stage3_unit2_relu3 = self.stage3_unit2_relu3(stage3_unit2_bn3)
+        stage3_unit2_conv3 = self.stage3_unit2_conv3(stage3_unit2_relu3)
+        plus8 = plus7 + stage3_unit2_conv3
+        return plus8
