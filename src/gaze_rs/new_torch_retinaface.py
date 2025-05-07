@@ -1,4 +1,5 @@
 # import torch
+import torch
 import torch.nn as nn
 
 from .utils import center_crop
@@ -707,6 +708,55 @@ class RetinafaceModel(nn.Module):
             bias=True,
         )
         self.ssh_m1_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        #
+        self.ssh_m1_det_context_conv2_pad = nn.ZeroPad2d(1)
+        self.ssh_m1_det_context_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False) # [1, 128, 28, 28]
+        #
+        self.ssh_m1_det_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m1_det_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        # ssh_m1_det_concat: [1, 512, 28, 28]
+        self.ssh_m1_det_concat_relu = nn.ReLU()
+        #
+        self.face_rpn_bbox_pred_stride8 = nn.Conv2d(
+            in_channels=512,
+            out_channels=8,
+            kernel_size=(1,1),
+            stride=(1,1),
+            bias=True,
+        )
+        self.face_rpn_cls_score_stride8 = nn.Conv2d(
+            in_channels=512,
+            out_channels=4,
+            kernel_size=(1,1),
+            stride=(1,1),
+            bias=True,
+        )
+        # face_rpn_cls_score_reshape_stride8: [1, 2, 28, 2, 28]
+        self.face_rpn_cls_prob_stride8 = nn.Softmax(dim=3)
+        #
+        self.face_rpn_landmark_pred_stride8 = nn.Conv2d(
+            in_channels=512,
+            out_channels=20,
+            kernel_size=(1,1),
+            stride=(1,1),
+            bias=True,
+        )
+        # stride16
+        self.ssh_m2_det_concat_relu = nn.ReLU()
 
 
     def forward(self, x):
@@ -1006,4 +1056,45 @@ class RetinafaceModel(nn.Module):
         ssh_m1_det_context_conv3_2_pad = self.ssh_m1_det_context_conv3_2_pad(ssh_m1_det_context_conv3_1_relu)
         ssh_m1_det_context_conv3_2 = self.ssh_m1_det_context_conv3_2(ssh_m1_det_context_conv3_2_pad)
         ssh_m1_det_context_conv3_2_bn = self.ssh_m1_det_context_conv3_2_bn(ssh_m1_det_context_conv3_2)
-        return ssh_m1_det_context_conv3_2_bn
+        #
+        ssh_m1_det_context_conv2_pad = self.ssh_m1_det_context_conv2_pad(ssh_m1_det_context_conv1_relu)
+        ssh_m1_det_context_conv2 = self.ssh_m1_det_context_conv2(ssh_m1_det_context_conv2_pad)
+        ssh_m1_det_context_conv2_bn = self.ssh_m1_det_context_conv2_bn(ssh_m1_det_context_conv2)
+        #
+        ssh_m1_det_conv1_pad = self.ssh_m1_det_conv1_pad(ssh_c1_aggr_relu)
+        ssh_m1_det_conv1 = self.ssh_m1_det_conv1(ssh_m1_det_conv1_pad)
+        ssh_m1_det_conv1_bn = self.ssh_m1_det_conv1_bn(ssh_m1_det_conv1)
+        # stride8
+        ssh_m1_det_concat = torch.cat(
+            [ssh_m1_det_conv1_bn, ssh_m1_det_context_conv2_bn, ssh_m1_det_context_conv3_2_bn],
+            dim=1  # channel axis in PyTorch
+        )
+        ssh_m1_det_concat_relu = self.ssh_m1_det_concat_relu(ssh_m1_det_concat)
+        #
+        face_rpn_cls_score_stride8 = self.face_rpn_cls_score_stride8(ssh_m1_det_concat_relu)
+        ch0 = face_rpn_cls_score_stride8[:, 0, :, :]
+        ch1 = face_rpn_cls_score_stride8[:, 1, :, :]
+        ch2 = face_rpn_cls_score_stride8[:, 2, :, :]
+        ch3 = face_rpn_cls_score_stride8[:, 3, :, :]
+        inter_1 = torch.stack([ch0, ch1], dim=1)
+        inter_2 = torch.stack([ch2, ch3], dim=1)
+        final = torch.stack([inter_1, inter_2], dim=0)
+        face_rpn_cls_score_reshape_stride8 = final.permute(1, 2, 3, 0, 4)
+        face_rpn_cls_prob_stride8 = self.face_rpn_cls_prob_stride8(face_rpn_cls_score_reshape_stride8)
+        B, C, H, A, W = face_rpn_cls_prob_stride8.shape
+        sz = H // 2
+        inter_1 = face_rpn_cls_prob_stride8[:, 0, 0:sz, 0, :]
+        inter_2 = face_rpn_cls_prob_stride8[:, 1, 0:sz, 0, :]
+        inter_3 = face_rpn_cls_prob_stride8[:, 0, sz:, 1, :]
+        inter_4 = face_rpn_cls_prob_stride8[:, 1, sz:, 1, :]
+        stacked = torch.stack([inter_1, inter_3, inter_2, inter_4], dim=1)
+        face_rpn_cls_prob_reshape_stride8 = stacked.permute(0, 2, 3, 1)
+        #
+        face_rpn_landmark_pred_stride8 = self.face_rpn_landmark_pred_stride8(ssh_m1_det_concat_relu) # [1, 20, 28, 28]
+        # stride16
+        ssh_m2_det_concat = torch.cat(
+            [ssh_m2_det_conv1_bn, ssh_m2_det_context_conv2_bn, ssh_m2_det_context_conv3_2_bn],
+            dim=1  # channel axis in PyTorch
+        )
+        ssh_m2_det_concat_relu = self.ssh_m2_det_concat_relu(ssh_m2_det_concat) # [1, 512, 14, 14]
+        return ssh_m2_det_concat_relu
