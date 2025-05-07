@@ -1,6 +1,8 @@
 # import torch
 import torch.nn as nn
 
+from .utils import center_crop
+
 
 BN_EPS = 1.9999999494757503e-05
 
@@ -526,8 +528,185 @@ class RetinafaceModel(nn.Module):
         )
         self.ssh_c3_lateral_bn = nn.BatchNorm2d(256, eps=BN_EPS)
         self.ssh_c3_lateral_relu = nn.ReLU()
+        #
         self.ssh_c3_up = nn.Upsample(scale_factor=2, mode="nearest")
         # ssh_c3_up: [1, 256, 14, 14]
+        self.ssh_m3_det_context_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m3_det_context_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m3_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m3_det_context_conv1_relu = nn.ReLU() # [1, 128, 7, 7]
+        #
+        self.ssh_m3_det_context_conv3_1_pad = nn.ZeroPad2d(1)
+        self.ssh_m3_det_context_conv3_1 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m3_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m3_det_context_conv3_1_relu = nn.ReLU()
+        self.ssh_m3_det_context_conv3_2_pad = nn.ZeroPad2d(1)
+        self.ssh_m3_det_context_conv3_2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m3_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False) # [1, 128, 7, 7]
+        #
+        self.ssh_m3_det_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m3_det_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m3_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False) # [1, 256, 7, 7]
+        #
+        self.ssh_m3_det_context_conv2_pad = nn.ZeroPad2d(1)
+        self.ssh_m3_det_context_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m3_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False) # [1, 128, 7, 7]
+        # ssh_m2
+        self.ssh_c2_lateral = nn.Conv2d(
+            in_channels=512,
+            out_channels=256,
+            kernel_size=(1,1),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_c2_lateral_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.ssh_c2_lateral_relu = nn.ReLU()
+        # plus0_v2: [1, 256, 14, 14]
+        self.ssh_c2_aggr_pad = nn.ZeroPad2d(1)
+        self.ssh_c2_aggr = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_c2_aggr_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.ssh_c2_aggr_relu = nn.ReLU() # [1, 256, 14, 14]
+        #
+        self.ssh_m2_red_up = nn.Upsample(scale_factor=2, mode="nearest")
+        #
+        self.ssh_m2_det_context_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m2_det_context_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m2_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m2_det_context_conv1_relu = nn.ReLU() # [1, 128, 14, 14]
+        #
+        self.ssh_m2_det_context_conv3_1_pad = nn.ZeroPad2d(1)
+        self.ssh_m2_det_context_conv3_1 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m2_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m2_det_context_conv3_1_relu = nn.ReLU()
+        self.ssh_m2_det_context_conv3_2_pad = nn.ZeroPad2d(1)
+        self.ssh_m2_det_context_conv3_2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m2_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False) # [1, 128, 14, 14]
+        #
+        self.ssh_m2_det_context_conv2_pad = nn.ZeroPad2d(1)
+        self.ssh_m2_det_context_conv2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m2_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False) # [1, 128, 14, 14]
+        #
+        self.ssh_m2_det_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m2_det_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m2_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False) # [1, 256, 14, 14]
+        # ssh_m1
+        self.ssh_m1_red_conv = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(1,1),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_red_conv_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.ssh_m1_red_conv_relu = nn.ReLU()
+        # plus1_v1: [1, 256, 28, 28]
+        self.ssh_c1_aggr_pad = nn.ZeroPad2d(1)
+        self.ssh_c1_aggr = nn.Conv2d(
+            in_channels=256,
+            out_channels=256,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_c1_aggr_bn = nn.BatchNorm2d(256, eps=BN_EPS, affine=False)
+        self.ssh_c1_aggr_relu = nn.ReLU() # [1, 256, 28, 28]
+        #
+        self.ssh_m1_det_context_conv1_pad = nn.ZeroPad2d(1)
+        self.ssh_m1_det_context_conv1 = nn.Conv2d(
+            in_channels=256,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m1_det_context_conv1_relu = nn.ReLU()
+        #
+        self.ssh_m1_det_context_conv3_1_pad = nn.ZeroPad2d(1)
+        self.ssh_m1_det_context_conv3_1 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
+        self.ssh_m1_det_context_conv3_1_relu = nn.ReLU()
+        self.ssh_m1_det_context_conv3_2_pad = nn.ZeroPad2d(1)
+        self.ssh_m1_det_context_conv3_2 = nn.Conv2d(
+            in_channels=128,
+            out_channels=128,
+            kernel_size=(3,3),
+            stride=(1,1),
+            bias=True,
+        )
+        self.ssh_m1_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS, affine=False)
 
 
     def forward(self, x):
@@ -746,5 +925,85 @@ class RetinafaceModel(nn.Module):
         ssh_c3_lateral = self.ssh_c3_lateral(relu1)
         ssh_c3_lateral_bn = self.ssh_c3_lateral_bn(ssh_c3_lateral)
         ssh_c3_lateral_relu = self.ssh_c3_lateral_relu(ssh_c3_lateral_bn)
+        #
         ssh_c3_up = self.ssh_c3_up(ssh_c3_lateral_relu)
-        return ssh_c3_up
+        #
+        ssh_m3_det_context_conv1_pad = self.ssh_m3_det_context_conv1_pad(ssh_c3_lateral_relu)
+        ssh_m3_det_context_conv1 = self.ssh_m3_det_context_conv1(ssh_m3_det_context_conv1_pad)
+        ssh_m3_det_context_conv1_bn = self.ssh_m3_det_context_conv1_bn(ssh_m3_det_context_conv1)
+        ssh_m3_det_context_conv1_relu = self.ssh_m3_det_context_conv1_relu(ssh_m3_det_context_conv1_bn)
+        #
+        ssh_m3_det_context_conv3_1_pad = self.ssh_m3_det_context_conv3_1_pad(ssh_m3_det_context_conv1_relu)
+        ssh_m3_det_context_conv3_1 = self.ssh_m3_det_context_conv3_1(ssh_m3_det_context_conv3_1_pad)
+        ssh_m3_det_context_conv3_1_bn = self.ssh_m3_det_context_conv3_1_bn(ssh_m3_det_context_conv3_1)
+        ssh_m3_det_context_conv3_1_relu = self.ssh_m3_det_context_conv3_1_relu(ssh_m3_det_context_conv3_1_bn)
+        ssh_m3_det_context_conv3_2_pad = self.ssh_m3_det_context_conv3_2_pad(ssh_m3_det_context_conv3_1_relu)
+        ssh_m3_det_context_conv3_2 = self.ssh_m3_det_context_conv3_2(ssh_m3_det_context_conv3_2_pad)
+        ssh_m3_det_context_conv3_2_bn = self.ssh_m3_det_context_conv3_2_bn(ssh_m3_det_context_conv3_2)
+        #
+        ssh_m3_det_conv1_pad = self.ssh_m3_det_conv1_pad(ssh_c3_lateral_relu)
+        ssh_m3_det_conv1 = self.ssh_m3_det_conv1(ssh_m3_det_conv1_pad)
+        ssh_m3_det_conv1_bn = self.ssh_m3_det_conv1_bn(ssh_m3_det_conv1)
+        #
+        ssh_m3_det_context_conv2_pad = self.ssh_m3_det_context_conv2_pad(ssh_m3_det_context_conv1_relu)
+        ssh_m3_det_context_conv2 = self.ssh_m3_det_context_conv2(ssh_m3_det_context_conv2_pad)
+        ssh_m3_det_context_conv2_bn = self.ssh_m3_det_context_conv2_bn(ssh_m3_det_context_conv2)
+        # ssh_m2
+        ssh_c2_lateral = self.ssh_c2_lateral(stage4_unit1_relu2)
+        ssh_c2_lateral_bn = self.ssh_c2_lateral_bn(ssh_c2_lateral)
+        ssh_c2_lateral_relu = self.ssh_c2_lateral_relu(ssh_c2_lateral_bn)
+        crop0 = center_crop(ssh_c3_up, ssh_c2_lateral_relu)
+        plus0_v2 = crop0 + ssh_c2_lateral_relu
+        #
+        ssh_c2_aggr_pad = self.ssh_c2_aggr_pad(plus0_v2)
+        ssh_c2_aggr = self.ssh_c2_aggr(ssh_c2_aggr_pad)
+        ssh_c2_aggr_bn = self.ssh_c2_aggr_bn(ssh_c2_aggr)
+        ssh_c2_aggr_relu = self.ssh_c2_aggr_relu(ssh_c2_aggr_bn)
+        #
+        ssh_m2_red_up = self.ssh_m2_red_up(ssh_c2_aggr_relu)
+        #
+        ssh_m2_det_context_conv1_pad = self.ssh_m2_det_context_conv1_pad(ssh_c2_aggr_relu)
+        ssh_m2_det_context_conv1 = self.ssh_m2_det_context_conv1(ssh_m2_det_context_conv1_pad)
+        ssh_m2_det_context_conv1_bn = self.ssh_m2_det_context_conv1_bn(ssh_m2_det_context_conv1)
+        ssh_m2_det_context_conv1_relu = self.ssh_m2_det_context_conv1_relu(ssh_m2_det_context_conv1_bn)
+        #
+        ssh_m2_det_context_conv3_1_pad = self.ssh_m2_det_context_conv3_1_pad(ssh_m2_det_context_conv1_relu)
+        ssh_m2_det_context_conv3_1 = self.ssh_m2_det_context_conv3_1(ssh_m2_det_context_conv3_1_pad)
+        ssh_m2_det_context_conv3_1_bn = self.ssh_m2_det_context_conv3_1_bn(ssh_m2_det_context_conv3_1)
+        ssh_m2_det_context_conv3_1_relu = self.ssh_m2_det_context_conv3_1_relu(ssh_m2_det_context_conv3_1_bn)
+        ssh_m2_det_context_conv3_2_pad = self.ssh_m2_det_context_conv3_2_pad(ssh_m2_det_context_conv3_1_relu)
+        ssh_m2_det_context_conv3_2 = self.ssh_m2_det_context_conv3_2(ssh_m2_det_context_conv3_2_pad)
+        ssh_m2_det_context_conv3_2_bn = self.ssh_m2_det_context_conv3_2_bn(ssh_m2_det_context_conv3_2)
+        #
+        ssh_m2_det_context_conv2_pad = self.ssh_m2_det_context_conv2_pad(ssh_m2_det_context_conv1_relu)
+        ssh_m2_det_context_conv2 = self.ssh_m2_det_context_conv2(ssh_m2_det_context_conv2_pad)
+        ssh_m2_det_context_conv2_bn = self.ssh_m2_det_context_conv2_bn(ssh_m2_det_context_conv2)
+        #
+        ssh_m2_det_conv1_pad = self.ssh_m2_det_conv1_pad(ssh_c2_aggr_relu)
+        ssh_m2_det_conv1 = self.ssh_m2_det_conv1(ssh_m2_det_conv1_pad)
+        ssh_m2_det_conv1_bn = self.ssh_m2_det_conv1_bn(ssh_m2_det_conv1)
+        # ssh_m1
+        ssh_m1_red_conv = self.ssh_m1_red_conv(stage3_unit1_relu2)
+        ssh_m1_red_conv_bn = self.ssh_m1_red_conv_bn(ssh_m1_red_conv)
+        ssh_m1_red_conv_relu = self.ssh_m1_red_conv_relu(ssh_m1_red_conv_bn)
+        crop1 = center_crop(ssh_m2_red_up, ssh_m1_red_conv_relu)
+        plus1_v1 = ssh_m1_red_conv_relu + crop1
+        #
+        ssh_c1_aggr_pad = self.ssh_c1_aggr_pad(plus1_v1)
+        ssh_c1_aggr = self.ssh_c1_aggr(ssh_c1_aggr_pad)
+        ssh_c1_aggr_bn = self.ssh_c1_aggr_bn(ssh_c1_aggr)
+        ssh_c1_aggr_relu = self.ssh_c1_aggr_relu(ssh_c1_aggr_bn)
+        #
+        ssh_m1_det_context_conv1_pad = self.ssh_m1_det_context_conv1_pad(ssh_c1_aggr_relu)
+        ssh_m1_det_context_conv1 = self.ssh_m1_det_context_conv1(ssh_m1_det_context_conv1_pad)
+        ssh_m1_det_context_conv1_bn = self.ssh_m1_det_context_conv1_bn(ssh_m1_det_context_conv1)
+        ssh_m1_det_context_conv1_relu = self.ssh_m1_det_context_conv1_relu(ssh_m1_det_context_conv1_bn)
+        #
+        ssh_m1_det_context_conv3_1_pad = self.ssh_m1_det_context_conv3_1_pad(ssh_m1_det_context_conv1_relu)
+        ssh_m1_det_context_conv3_1 = self.ssh_m1_det_context_conv3_1(ssh_m1_det_context_conv3_1_pad)
+        ssh_m1_det_context_conv3_1_bn = self.ssh_m1_det_context_conv3_1_bn(ssh_m1_det_context_conv3_1)
+        ssh_m1_det_context_conv3_1_relu = self.ssh_m1_det_context_conv3_1_relu(ssh_m1_det_context_conv3_1_bn)
+        ssh_m1_det_context_conv3_2_pad = self.ssh_m1_det_context_conv3_2_pad(ssh_m1_det_context_conv3_1_relu)
+        ssh_m1_det_context_conv3_2 = self.ssh_m1_det_context_conv3_2(ssh_m1_det_context_conv3_2_pad)
+        ssh_m1_det_context_conv3_2_bn = self.ssh_m1_det_context_conv3_2_bn(ssh_m1_det_context_conv3_2)
+        return ssh_m1_det_context_conv3_2_bn
