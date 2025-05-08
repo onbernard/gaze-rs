@@ -8,10 +8,12 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "pillow>=11.1.0",
-    "torch>=2.6.0",
-    "torchaudio>=2.6.0",
-    "torchvision>=0.21.0",
+    "deepface>=0.0.93",
+    "retina-face>=0.0.17",
+    "tf-keras>=2.19.0",
+    "torch>=2.8.0.dev20250507",
+    "torchaudio>=2.6.0.dev20250507",
+    "torchvision>=0.22.0.dev20250507",
 ]
 
 [project.scripts]
@@ -23,10 +25,14 @@ python-packages = ["gaze_rs"]
 python-source = "src"
 
 [[tool.uv.index]]
-url = "https://pypi.org/simple"
-
-[[tool.uv.index]]
+name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/nightly/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = {index = "pytorch-cpu"}
+torchaudio = {index = "pytorch-cpu"}
+torchvision = {index = "pytorch-cpu"}
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
@@ -34,16 +40,11 @@ build-backend = "maturin"
 
 [dependency-groups]
 dev = [
-    "euporie>=2.8.6",
+    "debugpy>=1.8.14",
     "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.5",
-    "openvino-dev>=2024.6.0",
-    "pyright[nodejs]>=1.1.394",
-    "python-lsp-ruff>=2.2.2",
-    "python-lsp-server>=1.12.2",
-    "ruff>=0.9.6",
-    "tensorboard>=2.19.0",
-    "torch-tb-profiler>=0.4.3",
+    "ipywidgets>=8.1.7",
+    "pyright>=1.1.400",
+    "ruff>=0.11.8",
     "tqdm>=4.67.1",
     "wat-inspector>=0.4.3",
 ]
