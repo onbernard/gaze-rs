@@ -12,5 +12,4 @@ wheels/
 .direnv/
 target/
 *.so
-tests-local/
 *.h5
