@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import h5py
+import cv2
 
 from .utils import center_crop
 
@@ -13,7 +14,7 @@ class RetinafaceModel(nn.Module):
     def __init__(self):
         super(RetinafaceModel, self).__init__()
         # stage 0
-        self.bn_data = nn.BatchNorm2d(3, eps=BN_EPS)
+        self.bn_data = nn.BatchNorm2d(3)
         self.conv0_pad = nn.ZeroPad2d(3)
         self.conv0 = nn.Conv2d(
             in_channels=3,
@@ -23,13 +24,13 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False
         )
-        self.bn0 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.bn0 = nn.BatchNorm2d(64)
         self.relu0 = nn.ReLU()
         self.pooling0_pad = nn.ZeroPad2d(1)
         self.pooling0 =  nn.MaxPool2d(kernel_size=3, stride=2, padding=0) # [1, 64, 56, 56]
         # stage 1
         ## unit 1
-        self.stage1_unit1_bn1 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit1_bn1 = nn.BatchNorm2d(64)
         self.stage1_unit1_relu1 = nn.ReLU()
         self.stage1_unit1_conv1 = nn.Conv2d(
             in_channels=64,
@@ -39,7 +40,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit1_bn2 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit1_bn2 = nn.BatchNorm2d(64)
         self.stage1_unit1_relu2 = nn.ReLU()
         self.stage1_unit1_conv2_pad = nn.ZeroPad2d(1)
         self.stage1_unit1_conv2 = nn.Conv2d(
@@ -50,7 +51,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit1_bn3 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit1_bn3 = nn.BatchNorm2d(64)
         self.stage1_unit1_relu3 = nn.ReLU()
         self.stage1_unit1_conv3 = nn.Conv2d(
             in_channels=64,
@@ -70,7 +71,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus0_v1 : [1, 256, 56, 56]
         ## unit 1 stage 2
-        self.stage1_unit2_bn1 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage1_unit2_bn1 = nn.BatchNorm2d(256)
         self.stage1_unit2_relu1 = nn.ReLU()
         self.stage1_unit2_conv1 = nn.Conv2d(
             in_channels=256,
@@ -80,7 +81,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit2_bn2 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit2_bn2 = nn.BatchNorm2d(64)
         self.stage1_unit2_relu2 = nn.ReLU()
         self.stage1_unit2_conv2_pad = nn.ZeroPad2d(1)
         self.stage1_unit2_conv2 = nn.Conv2d(
@@ -91,7 +92,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit2_bn3 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit2_bn3 = nn.BatchNorm2d(64)
         self.stage1_unit2_relu3 = nn.ReLU()
         self.stage1_unit2_conv3 = nn.Conv2d(
             in_channels=64,
@@ -103,7 +104,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus1_v2: 1, 256, 56, 56]
         ## stage1_unit3
-        self.stage1_unit3_bn1 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage1_unit3_bn1 = nn.BatchNorm2d(256)
         self.stage1_unit3_relu1 = nn.ReLU()
         self.stage1_unit3_conv1 = nn.Conv2d(
             in_channels=256,
@@ -113,7 +114,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit3_bn2 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit3_bn2 = nn.BatchNorm2d(64)
         self.stage1_unit3_relu2 = nn.ReLU()
         self.stage1_unit3_conv2_pad = nn.ZeroPad2d(1)
         self.stage1_unit3_conv2 = nn.Conv2d(
@@ -124,7 +125,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage1_unit3_bn3 = nn.BatchNorm2d(64, eps=BN_EPS)
+        self.stage1_unit3_bn3 = nn.BatchNorm2d(64)
         self.stage1_unit3_relu3 = nn.ReLU()
         self.stage1_unit3_conv3 = nn.Conv2d(
             in_channels=64,
@@ -137,7 +138,7 @@ class RetinafaceModel(nn.Module):
         # plus2: [1, 256, 56, 56]
         # stage2
         ## stage2_unit1
-        self.stage2_unit1_bn1 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage2_unit1_bn1 = nn.BatchNorm2d(256)
         self.stage2_unit1_relu1 = nn.ReLU()
         self.stage2_unit1_conv1 = nn.Conv2d(
             in_channels=256,
@@ -147,7 +148,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage2_unit1_bn2 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit1_bn2 = nn.BatchNorm2d(128)
         self.stage2_unit1_relu2 = nn.ReLU()
         self.stage2_unit1_conv2_pad = nn.ZeroPad2d(1)
         self.stage2_unit1_conv2 = nn.Conv2d(
@@ -158,7 +159,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage2_unit1_bn3 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit1_bn3 = nn.BatchNorm2d(128)
         self.stage2_unit1_relu3 = nn.ReLU()
         self.stage2_unit1_conv3 = nn.Conv2d(
             in_channels=128,
@@ -178,7 +179,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus3: [1, 512, 28, 28]
         ## stage2_unit2
-        self.stage2_unit2_bn1 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage2_unit2_bn1 = nn.BatchNorm2d(512)
         self.stage2_unit2_relu1 = nn.ReLU()
         self.stage2_unit2_conv1 = nn.Conv2d(
             in_channels=512,
@@ -188,7 +189,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage2_unit2_bn2 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit2_bn2 = nn.BatchNorm2d(128)
         self.stage2_unit2_relu2 = nn.ReLU()
         self.stage2_unit2_conv2_pad = nn.ZeroPad2d(1)
         self.stage2_unit2_conv2 = nn.Conv2d(
@@ -199,7 +200,7 @@ class RetinafaceModel(nn.Module):
             padding=0,
             bias=False,
         )
-        self.stage2_unit2_bn3 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit2_bn3 = nn.BatchNorm2d(128)
         self.stage2_unit2_relu3 = nn.ReLU()
         self.stage2_unit2_conv3 = nn.Conv2d(
             in_channels=128,
@@ -211,7 +212,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus4: [1, 512, 80, 80]
         ## stage2_unit3
-        self.stage2_unit3_bn1 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage2_unit3_bn1 = nn.BatchNorm2d(512)
         self.stage2_unit3_relu1 = nn.ReLU()
         self.stage2_unit3_conv1 = nn.Conv2d(
             in_channels=512,
@@ -219,7 +220,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1),
         )
-        self.stage2_unit3_bn2 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit3_bn2 = nn.BatchNorm2d(128)
         self.stage2_unit3_relu2 = nn.ReLU()
         self.stage2_unit3_conv2_pad = nn.ZeroPad2d(1)
         self.stage2_unit3_conv2 = nn.Conv2d(
@@ -228,7 +229,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1),
         )
-        self.stage2_unit3_bn3 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit3_bn3 = nn.BatchNorm2d(128)
         self.stage2_unit3_relu3 = nn.ReLU()
         self.stage2_unit3_conv3 = nn.Conv2d(
             in_channels=128,
@@ -238,7 +239,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus5: [1, 512, 28, 28]
         ## stage2_unit4
-        self.stage2_unit4_bn1 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage2_unit4_bn1 = nn.BatchNorm2d(512)
         self.stage2_unit4_relu1 = nn.ReLU()
         self.stage2_unit4_conv1 = nn.Conv2d(
             in_channels=512,
@@ -246,7 +247,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1),
         )
-        self.stage2_unit4_bn2 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit4_bn2 = nn.BatchNorm2d(128)
         self.stage2_unit4_relu2 = nn.ReLU()
         self.stage2_unit4_conv2_pad = nn.ZeroPad2d(1)
         self.stage2_unit4_conv2 = nn.Conv2d(
@@ -255,7 +256,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1),
         )
-        self.stage2_unit4_bn3 = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.stage2_unit4_bn3 = nn.BatchNorm2d(128)
         self.stage2_unit4_relu3 = nn.ReLU()
         self.stage2_unit4_conv3 = nn.Conv2d(
             in_channels=128,
@@ -264,7 +265,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
         )
         # plus6: [1, 512, 28, 28]
-        self.stage3_unit1_bn1 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage3_unit1_bn1 = nn.BatchNorm2d(512)
         self.stage3_unit1_relu1 = nn.ReLU()
         self.stage3_unit1_conv1 = nn.Conv2d(
             in_channels=512,
@@ -272,7 +273,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1),
         )
-        self.stage3_unit1_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit1_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit1_relu2 = nn.ReLU()
         self.stage3_unit1_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit1_conv2 = nn.Conv2d(
@@ -281,7 +282,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(2,2),
         )
-        self.stage3_unit1_bn3 = nn.BatchNorm2d(256, eps=BN_EPS )
+        self.stage3_unit1_bn3 = nn.BatchNorm2d(256 )
         self.stage3_unit1_relu3 = nn.ReLU()
         self.stage3_unit1_conv3 = nn.Conv2d(
             in_channels=256,
@@ -296,7 +297,7 @@ class RetinafaceModel(nn.Module):
             stride=(2,2)
         )
         # plus7: [1, 1024, 14, 14]
-        self.stage3_unit2_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage3_unit2_bn1 = nn.BatchNorm2d(1024)
         self.stage3_unit2_relu1 = nn.ReLU()
         self.stage3_unit2_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -304,7 +305,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage3_unit2_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit2_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit2_relu2 = nn.ReLU()
         self.stage3_unit2_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit2_conv2 = nn.Conv2d(
@@ -313,7 +314,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage3_unit2_bn3 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit2_bn3 = nn.BatchNorm2d(256)
         self.stage3_unit2_relu3 = nn.ReLU()
         self.stage3_unit2_conv3 = nn.Conv2d(
             in_channels=256,
@@ -323,7 +324,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus8: [1, 1024, 14, 14]
         ## stage3_unit3
-        self.stage3_unit3_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage3_unit3_bn1 = nn.BatchNorm2d(1024)
         self.stage3_unit3_relu1 = nn.ReLU()
         self.stage3_unit3_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -331,7 +332,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage3_unit3_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit3_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit3_relu2 = nn.ReLU()
         self.stage3_unit3_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit3_conv2 = nn.Conv2d(
@@ -340,7 +341,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage3_unit3_bn3 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit3_bn3 = nn.BatchNorm2d(256)
         self.stage3_unit3_relu3 = nn.ReLU()
         self.stage3_unit3_conv3 = nn.Conv2d(
             in_channels=256,
@@ -350,7 +351,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus9: [1, 1024, 14, 14]
         ## stage3_unit4
-        self.stage3_unit4_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage3_unit4_bn1 = nn.BatchNorm2d(1024)
         self.stage3_unit4_relu1 = nn.ReLU()
         self.stage3_unit4_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -358,7 +359,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage3_unit4_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit4_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit4_relu2 = nn.ReLU()
         self.stage3_unit4_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit4_conv2 = nn.Conv2d(
@@ -367,7 +368,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage3_unit4_bn3 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit4_bn3 = nn.BatchNorm2d(256)
         self.stage3_unit4_relu3 = nn.ReLU()
         self.stage3_unit4_conv3 = nn.Conv2d(
             in_channels=256,
@@ -377,7 +378,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus10: [1, 1024, 14, 14]
         ## stage3_unit5
-        self.stage3_unit5_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage3_unit5_bn1 = nn.BatchNorm2d(1024)
         self.stage3_unit5_relu1 = nn.ReLU()
         self.stage3_unit5_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -385,7 +386,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage3_unit5_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit5_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit5_relu2 = nn.ReLU()
         self.stage3_unit5_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit5_conv2 = nn.Conv2d(
@@ -394,7 +395,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage3_unit5_bn3 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit5_bn3 = nn.BatchNorm2d(256)
         self.stage3_unit5_relu3 = nn.ReLU()
         self.stage3_unit5_conv3 = nn.Conv2d(
             in_channels=256,
@@ -404,7 +405,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus11: [1, 1024, 14, 14]
         ## stage3_unit6
-        self.stage3_unit6_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage3_unit6_bn1 = nn.BatchNorm2d(1024)
         self.stage3_unit6_relu1 = nn.ReLU()
         self.stage3_unit6_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -412,7 +413,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage3_unit6_bn2 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit6_bn2 = nn.BatchNorm2d(256)
         self.stage3_unit6_relu2 = nn.ReLU()
         self.stage3_unit6_conv2_pad = nn.ZeroPad2d(1)
         self.stage3_unit6_conv2 = nn.Conv2d(
@@ -421,7 +422,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage3_unit6_bn3 = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.stage3_unit6_bn3 = nn.BatchNorm2d(256)
         self.stage3_unit6_relu3 = nn.ReLU()
         self.stage3_unit6_conv3 = nn.Conv2d(
             in_channels=256,
@@ -432,7 +433,7 @@ class RetinafaceModel(nn.Module):
         # plus12: [1, 1024, 14, 14]
         # stage4
         ## stage4_unit1
-        self.stage4_unit1_bn1 = nn.BatchNorm2d(1024, eps=BN_EPS)
+        self.stage4_unit1_bn1 = nn.BatchNorm2d(1024)
         self.stage4_unit1_relu1 = nn.ReLU()
         self.stage4_unit1_conv1 = nn.Conv2d(
             in_channels=1024,
@@ -440,7 +441,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1),
         )
-        self.stage4_unit1_bn2 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage4_unit1_bn2 = nn.BatchNorm2d(512)
         self.stage4_unit1_relu2 = nn.ReLU()
         self.stage4_unit1_conv2_pad = nn.ZeroPad2d(1)
         self.stage4_unit1_conv2 = nn.Conv2d(
@@ -449,7 +450,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(2,2),
         )
-        self.stage4_unit1_bn3 = nn.BatchNorm2d(512, eps=BN_EPS )
+        self.stage4_unit1_bn3 = nn.BatchNorm2d(512 )
         self.stage4_unit1_relu3 = nn.ReLU()
         self.stage4_unit1_conv3 = nn.Conv2d(
             in_channels=512,
@@ -465,7 +466,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus13: [1, 2048, 7, 7]
         ## stage4_unit2
-        self.stage4_unit2_bn1 = nn.BatchNorm2d(2048, eps=BN_EPS)
+        self.stage4_unit2_bn1 = nn.BatchNorm2d(2048)
         self.stage4_unit2_relu1 = nn.ReLU()
         self.stage4_unit2_conv1 = nn.Conv2d(
             in_channels=2048,
@@ -473,7 +474,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage4_unit2_bn2 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage4_unit2_bn2 = nn.BatchNorm2d(512)
         self.stage4_unit2_relu2 = nn.ReLU()
         self.stage4_unit2_conv2_pad = nn.ZeroPad2d(1)
         self.stage4_unit2_conv2 = nn.Conv2d(
@@ -482,7 +483,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage4_unit2_bn3 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage4_unit2_bn3 = nn.BatchNorm2d(512)
         self.stage4_unit2_relu3 = nn.ReLU()
         self.stage4_unit2_conv3 = nn.Conv2d(
             in_channels=512,
@@ -492,7 +493,7 @@ class RetinafaceModel(nn.Module):
         )
         # plus14: [1, 2048, 7, 7]
         ## stage4_unit3
-        self.stage4_unit3_bn1 = nn.BatchNorm2d(2048, eps=BN_EPS)
+        self.stage4_unit3_bn1 = nn.BatchNorm2d(2048)
         self.stage4_unit3_relu1 = nn.ReLU()
         self.stage4_unit3_conv1 = nn.Conv2d(
             in_channels=2048,
@@ -500,7 +501,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(1,1),
             stride=(1,1)
         )
-        self.stage4_unit3_bn2 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage4_unit3_bn2 = nn.BatchNorm2d(512)
         self.stage4_unit3_relu2 = nn.ReLU()
         self.stage4_unit3_conv2_pad = nn.ZeroPad2d(1)
         self.stage4_unit3_conv2 = nn.Conv2d(
@@ -509,7 +510,7 @@ class RetinafaceModel(nn.Module):
             kernel_size=(3,3),
             stride=(1,1)
         )
-        self.stage4_unit3_bn3 = nn.BatchNorm2d(512, eps=BN_EPS)
+        self.stage4_unit3_bn3 = nn.BatchNorm2d(512)
         self.stage4_unit3_relu3 = nn.ReLU()
         self.stage4_unit3_conv3 = nn.Conv2d(
             in_channels=512,
@@ -518,7 +519,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1)
         )
         # plus15: [1, 2048, 7, 7]
-        self.bn1 = nn.BatchNorm2d(2048, eps=BN_EPS)
+        self.bn1 = nn.BatchNorm2d(2048)
         self.relu1 = nn.ReLU()
         # ssh_m3
         self.ssh_c3_lateral = nn.Conv2d(
@@ -528,7 +529,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_c3_lateral_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_c3_lateral_bn = nn.BatchNorm2d(256)
         self.ssh_c3_lateral_relu = nn.ReLU()
         #
         self.ssh_c3_up = nn.Upsample(scale_factor=2, mode="nearest")
@@ -541,7 +542,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m3_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m3_det_context_conv1_bn = nn.BatchNorm2d(128)
         self.ssh_m3_det_context_conv1_relu = nn.ReLU() # [1, 128, 7, 7]
         #
         self.ssh_m3_det_context_conv3_1_pad = nn.ZeroPad2d(1)
@@ -552,7 +553,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m3_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m3_det_context_conv3_1_bn = nn.BatchNorm2d(128)
         self.ssh_m3_det_context_conv3_1_relu = nn.ReLU()
         self.ssh_m3_det_context_conv3_2_pad = nn.ZeroPad2d(1)
         self.ssh_m3_det_context_conv3_2 = nn.Conv2d(
@@ -562,7 +563,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m3_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS) # [1, 128, 7, 7]
+        self.ssh_m3_det_context_conv3_2_bn = nn.BatchNorm2d(128) # [1, 128, 7, 7]
         #
         self.ssh_m3_det_conv1_pad = nn.ZeroPad2d(1)
         self.ssh_m3_det_conv1 = nn.Conv2d(
@@ -572,7 +573,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m3_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS) # [1, 256, 7, 7]
+        self.ssh_m3_det_conv1_bn = nn.BatchNorm2d(256) # [1, 256, 7, 7]
         #
         self.ssh_m3_det_context_conv2_pad = nn.ZeroPad2d(1)
         self.ssh_m3_det_context_conv2 = nn.Conv2d(
@@ -582,7 +583,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m3_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS) # [1, 128, 7, 7]
+        self.ssh_m3_det_context_conv2_bn = nn.BatchNorm2d(128) # [1, 128, 7, 7]
         # ssh_m2
         self.ssh_c2_lateral = nn.Conv2d(
             in_channels=512,
@@ -591,7 +592,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_c2_lateral_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_c2_lateral_bn = nn.BatchNorm2d(256)
         self.ssh_c2_lateral_relu = nn.ReLU()
         # plus0_v2: [1, 256, 14, 14]
         self.ssh_c2_aggr_pad = nn.ZeroPad2d(1)
@@ -602,7 +603,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_c2_aggr_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_c2_aggr_bn = nn.BatchNorm2d(256)
         self.ssh_c2_aggr_relu = nn.ReLU() # [1, 256, 14, 14]
         #
         self.ssh_m2_red_up = nn.Upsample(scale_factor=2, mode="nearest")
@@ -615,7 +616,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m2_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m2_det_context_conv1_bn = nn.BatchNorm2d(128)
         self.ssh_m2_det_context_conv1_relu = nn.ReLU() # [1, 128, 14, 14]
         #
         self.ssh_m2_det_context_conv3_1_pad = nn.ZeroPad2d(1)
@@ -626,7 +627,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m2_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m2_det_context_conv3_1_bn = nn.BatchNorm2d(128)
         self.ssh_m2_det_context_conv3_1_relu = nn.ReLU()
         self.ssh_m2_det_context_conv3_2_pad = nn.ZeroPad2d(1)
         self.ssh_m2_det_context_conv3_2 = nn.Conv2d(
@@ -636,7 +637,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m2_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS) # [1, 128, 14, 14]
+        self.ssh_m2_det_context_conv3_2_bn = nn.BatchNorm2d(128) # [1, 128, 14, 14]
         #
         self.ssh_m2_det_context_conv2_pad = nn.ZeroPad2d(1)
         self.ssh_m2_det_context_conv2 = nn.Conv2d(
@@ -646,7 +647,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m2_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS) # [1, 128, 14, 14]
+        self.ssh_m2_det_context_conv2_bn = nn.BatchNorm2d(128) # [1, 128, 14, 14]
         #
         self.ssh_m2_det_conv1_pad = nn.ZeroPad2d(1)
         self.ssh_m2_det_conv1 = nn.Conv2d(
@@ -656,7 +657,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m2_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS) # [1, 256, 14, 14]
+        self.ssh_m2_det_conv1_bn = nn.BatchNorm2d(256) # [1, 256, 14, 14]
         # ssh_m1
         self.ssh_m1_red_conv = nn.Conv2d(
             in_channels=256,
@@ -665,7 +666,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_red_conv_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_m1_red_conv_bn = nn.BatchNorm2d(256)
         self.ssh_m1_red_conv_relu = nn.ReLU()
         # plus1_v1: [1, 256, 28, 28]
         self.ssh_c1_aggr_pad = nn.ZeroPad2d(1)
@@ -676,7 +677,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_c1_aggr_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_c1_aggr_bn = nn.BatchNorm2d(256)
         self.ssh_c1_aggr_relu = nn.ReLU() # [1, 256, 28, 28]
         #
         self.ssh_m1_det_context_conv1_pad = nn.ZeroPad2d(1)
@@ -687,7 +688,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_det_context_conv1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m1_det_context_conv1_bn = nn.BatchNorm2d(128)
         self.ssh_m1_det_context_conv1_relu = nn.ReLU()
         #
         self.ssh_m1_det_context_conv3_1_pad = nn.ZeroPad2d(1)
@@ -698,7 +699,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_det_context_conv3_1_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m1_det_context_conv3_1_bn = nn.BatchNorm2d(128)
         self.ssh_m1_det_context_conv3_1_relu = nn.ReLU()
         self.ssh_m1_det_context_conv3_2_pad = nn.ZeroPad2d(1)
         self.ssh_m1_det_context_conv3_2 = nn.Conv2d(
@@ -708,7 +709,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_det_context_conv3_2_bn = nn.BatchNorm2d(128, eps=BN_EPS)
+        self.ssh_m1_det_context_conv3_2_bn = nn.BatchNorm2d(128)
         #
         self.ssh_m1_det_context_conv2_pad = nn.ZeroPad2d(1)
         self.ssh_m1_det_context_conv2 = nn.Conv2d(
@@ -718,7 +719,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_det_context_conv2_bn = nn.BatchNorm2d(128, eps=BN_EPS) # [1, 128, 28, 28]
+        self.ssh_m1_det_context_conv2_bn = nn.BatchNorm2d(128) # [1, 128, 28, 28]
         #
         self.ssh_m1_det_conv1_pad = nn.ZeroPad2d(1)
         self.ssh_m1_det_conv1 = nn.Conv2d(
@@ -728,7 +729,7 @@ class RetinafaceModel(nn.Module):
             stride=(1,1),
             bias=True,
         )
-        self.ssh_m1_det_conv1_bn = nn.BatchNorm2d(256, eps=BN_EPS)
+        self.ssh_m1_det_conv1_bn = nn.BatchNorm2d(256)
         # ssh_m1_det_concat: [1, 512, 28, 28]
         self.ssh_m1_det_concat_relu = nn.ReLU()
         #
@@ -1165,17 +1166,17 @@ class RetinafaceModel(nn.Module):
         ## landmark
         face_rpn_landmark_pred_stride32 = self.face_rpn_landmark_pred_stride32(ssh_m3_det_concat_relu)
         return (
-            face_rpn_bbox_pred_stride8,
-            face_rpn_cls_score_stride8,
-            face_rpn_landmark_pred_stride8,
+            face_rpn_cls_prob_stride32,
+            face_rpn_bbox_pred_stride32,
+            face_rpn_landmark_pred_stride32,
             #
+            face_rpn_cls_prob_stride16,
             face_rpn_bbox_pred_stride16,
-            face_rpn_cls_score_stride16,
             face_rpn_landmark_pred_stride16,
             #
-            face_rpn_bbox_pred_stride32,
-            face_rpn_cls_score_stride32,
-            face_rpn_landmark_pred_stride32,
+            face_rpn_cls_prob_stride8,
+            face_rpn_bbox_pred_stride8,
+            face_rpn_landmark_pred_stride8,
         )
 
 
@@ -1323,3 +1324,98 @@ def load_weights(h5_path: str, model: RetinafaceModel):
     load_conv2d(model.stage4_unit3_conv2, f["stage4_unit3_conv2/stage4_unit3_conv2"]) # type: ignore
     load_bn(model.stage4_unit3_bn3, f["stage4_unit3_bn3/stage4_unit3_bn3"]) # type: ignore
     load_conv2d(model.stage4_unit3_conv3, f["stage4_unit3_conv3/stage4_unit3_conv3"]) # type: ignore
+    # ssh_1
+    load_conv2d(model.ssh_m1_red_conv, f["ssh_m1_red_conv/ssh_m1_red_conv"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_red_conv_bn, f["ssh_m1_red_conv_bn/ssh_m1_red_conv_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_c1_aggr, f["ssh_c1_aggr/ssh_c1_aggr"], bias=True) # type: ignore
+    load_bn(model.ssh_c1_aggr_bn, f["ssh_c1_aggr_bn/ssh_c1_aggr_bn"]) # type: ignore
+    load_conv2d(model.ssh_m1_det_context_conv1, f["ssh_m1_det_context_conv1/ssh_m1_det_context_conv1"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_det_context_conv1_bn, f["ssh_m1_det_context_conv1_bn/ssh_m1_det_context_conv1_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m1_det_context_conv3_1, f["ssh_m1_det_context_conv3_1/ssh_m1_det_context_conv3_1"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_det_context_conv3_1_bn, f["ssh_m1_det_context_conv3_1_bn/ssh_m1_det_context_conv3_1_bn"]) # type: ignore
+    load_conv2d(model.ssh_m1_det_context_conv3_2, f["ssh_m1_det_context_conv3_2/ssh_m1_det_context_conv3_2"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_det_context_conv3_2_bn, f["ssh_m1_det_context_conv3_2_bn/ssh_m1_det_context_conv3_2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m1_det_context_conv2, f["ssh_m1_det_context_conv2/ssh_m1_det_context_conv2"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_det_context_conv2_bn, f["ssh_m1_det_context_conv2_bn/ssh_m1_det_context_conv2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m1_det_conv1, f["ssh_m1_det_conv1/ssh_m1_det_conv1"], bias=True) # type: ignore
+    load_bn(model.ssh_m1_det_conv1_bn, f["ssh_m1_det_conv1_bn/ssh_m1_det_conv1_bn"]) # type: ignore
+    # ssh_2
+    load_conv2d(model.ssh_c2_lateral, f["ssh_c2_lateral/ssh_c2_lateral"], bias=True) # type: ignore
+    load_bn(model.ssh_c2_lateral_bn, f["ssh_c2_lateral_bn/ssh_c2_lateral_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_c2_aggr, f["ssh_c2_aggr/ssh_c2_aggr"], bias=True) # type: ignore
+    load_bn(model.ssh_c2_aggr_bn, f["ssh_c2_aggr_bn/ssh_c2_aggr_bn"]) # type: ignore
+    load_conv2d(model.ssh_m2_det_context_conv1, f["ssh_m2_det_context_conv1/ssh_m2_det_context_conv1"], bias=True) # type: ignore
+    load_bn(model.ssh_m2_det_context_conv1_bn, f["ssh_m2_det_context_conv1_bn/ssh_m2_det_context_conv1_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m2_det_context_conv3_1, f["ssh_m2_det_context_conv3_1/ssh_m2_det_context_conv3_1"], bias=True) # type: ignore
+    load_bn(model.ssh_m2_det_context_conv3_1_bn, f["ssh_m2_det_context_conv3_1_bn/ssh_m2_det_context_conv3_1_bn"]) # type: ignore
+    load_conv2d(model.ssh_m2_det_context_conv3_2, f["ssh_m2_det_context_conv3_2/ssh_m2_det_context_conv3_2"], bias=True) # type: ignore
+    load_bn(model.ssh_m2_det_context_conv3_2_bn, f["ssh_m2_det_context_conv3_2_bn/ssh_m2_det_context_conv3_2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m2_det_context_conv2, f["ssh_m2_det_context_conv2/ssh_m2_det_context_conv2"], bias=True) # type: ignore
+    load_bn(model.ssh_m2_det_context_conv2_bn, f["ssh_m2_det_context_conv2_bn/ssh_m2_det_context_conv2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m2_det_conv1, f["ssh_m2_det_conv1/ssh_m2_det_conv1"], bias=True) # type: ignore
+    load_bn(model.ssh_m2_det_conv1_bn, f["ssh_m2_det_conv1_bn/ssh_m2_det_conv1_bn"]) # type: ignore
+    # ssh_3
+    load_bn(model.bn1, f["bn1/bn1"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_c3_lateral, f["ssh_c3_lateral/ssh_c3_lateral"], bias=True) # type: ignore
+    load_bn(model.ssh_c3_lateral_bn, f["ssh_c3_lateral_bn/ssh_c3_lateral_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m3_det_context_conv3_1, f["ssh_m3_det_context_conv3_1/ssh_m3_det_context_conv3_1"], bias=True) # type: ignore
+    load_bn(model.ssh_m3_det_context_conv3_1_bn, f["ssh_m3_det_context_conv3_1_bn/ssh_m3_det_context_conv3_1_bn"]) # type: ignore
+    load_conv2d(model.ssh_m3_det_context_conv3_2, f["ssh_m3_det_context_conv3_2/ssh_m3_det_context_conv3_2"], bias=True) # type: ignore
+    load_bn(model.ssh_m3_det_context_conv3_2_bn, f["ssh_m3_det_context_conv3_2_bn/ssh_m3_det_context_conv3_2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m3_det_context_conv2, f["ssh_m3_det_context_conv2/ssh_m3_det_context_conv2"], bias=True) # type: ignore
+    load_bn(model.ssh_m3_det_context_conv2_bn, f["ssh_m3_det_context_conv2_bn/ssh_m3_det_context_conv2_bn"]) # type: ignore
+    ##
+    load_conv2d(model.ssh_m3_det_conv1, f["ssh_m3_det_conv1/ssh_m3_det_conv1"], bias=True) # type: ignore
+    load_bn(model.ssh_m3_det_conv1_bn, f["ssh_m3_det_conv1_bn/ssh_m3_det_conv1_bn"]) # type: ignore
+    # stride8
+    load_conv2d(model.face_rpn_bbox_pred_stride8, f["face_rpn_bbox_pred_stride8/face_rpn_bbox_pred_stride8"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_cls_score_stride8, f["face_rpn_cls_score_stride8/face_rpn_cls_score_stride8"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_landmark_pred_stride8, f["face_rpn_landmark_pred_stride8/face_rpn_landmark_pred_stride8"], bias=True) # type: ignore
+    # stride16
+    load_conv2d(model.face_rpn_bbox_pred_stride16, f["face_rpn_bbox_pred_stride16/face_rpn_bbox_pred_stride16"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_cls_score_stride16, f["face_rpn_cls_score_stride16/face_rpn_cls_score_stride16"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_landmark_pred_stride16, f["face_rpn_landmark_pred_stride16/face_rpn_landmark_pred_stride16"], bias=True) # type: ignore
+    # stride32
+    load_conv2d(model.face_rpn_bbox_pred_stride32, f["face_rpn_bbox_pred_stride32/face_rpn_bbox_pred_stride32"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_cls_score_stride32, f["face_rpn_cls_score_stride32/face_rpn_cls_score_stride32"], bias=True) # type: ignore
+    load_conv2d(model.face_rpn_landmark_pred_stride32, f["face_rpn_landmark_pred_stride32/face_rpn_landmark_pred_stride32"], bias=True) # type: ignore
+
+
+def preprocess_image(img: np.ndarray, allow_upscaling: bool=False):
+    scales = [1024, 1980]
+    img, im_scale = resize_image(img, scales, allow_upscaling)
+    img = img.astype(np.float32)
+    img = img[::,::,::-1]
+    img_tensor = np.zeros((1, 3, img.shape[0], img.shape[1]))
+    for i in range(3):
+        img_tensor[0,i,::,::] = img[::,::,i]
+    return img_tensor, img.shape[0:2], im_scale
+
+
+def resize_image(img: np.ndarray, scales: list, allow_upscaling: bool) -> tuple:
+    img_h, img_w = img.shape[0:2]
+    target_size = scales[0]
+    max_size = scales[1]
+    if img_w > img_h:
+        im_size_min, im_size_max = img_h, img_w
+    else:
+        im_size_min, im_size_max = img_w, img_h
+    im_scale = target_size / float(im_size_min)
+    if not allow_upscaling:
+        im_scale = min(1.0, im_scale)
+    if np.round(im_scale * im_size_max) > max_size:
+        im_scale = max_size / float(im_size_max)
+    if im_scale != 1.0:
+        img = cv2.resize(img, None, None, fx=im_scale, fy=im_scale, interpolation=cv2.INTER_LINEAR)
+    return img, im_scale
